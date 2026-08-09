@@ -1,0 +1,17 @@
+# Overrides for the shared webapp chart:
+#   oci://443496863898.dkr.ecr.us-west-2.amazonaws.com/charts/webapp
+#
+# Chart defaults already match this app's shape (container port 3000,
+# healthcheck /api/health, non-root security, wildcard ACM cert). Only image
+# repo + ingress hosts need overriding here.
+
+image:
+  repository: 443496863898.dkr.ecr.us-west-2.amazonaws.com/giolosts/maintenance
+  # tag is set by the deploy workflow via --set image.tag=<sha>
+
+ingress:
+  hosts:
+    - maintenance.giolosts.co
+    - qa-pbr.giolosts.co
+    - qa-pbn.giolosts.co
+    - qa-phr.giolosts.co

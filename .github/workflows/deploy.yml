@@ -1,0 +1,30 @@
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write   # required for OIDC to AWS
+  contents: read
+
+jobs:
+  build:
+    uses: giolosts/infratech-github-actions/.github/workflows/docker-build-push.yml@v1
+    with:
+      ecr-repository: giolosts/maintenance
+      role-arn: arn:aws:iam::443496863898:role/github-actions-ecr-push
+
+  deploy:
+    needs: build
+    uses: giolosts/infratech-github-actions/.github/workflows/helm-deploy.yml@v1
+    with:
+      cluster-name: infratech-prod
+      release-name: maintenance
+      namespace: maintenance
+      chart: oci://443496863898.dkr.ecr.us-west-2.amazonaws.com/charts/webapp
+      chart-version: 0.1.0
+      values-file: deploy/values.yaml
+      extra-set: image.tag=${{ needs.build.outputs.image-tag }}
+      role-arn: arn:aws:iam::443496863898:role/github-actions-eks-deploy

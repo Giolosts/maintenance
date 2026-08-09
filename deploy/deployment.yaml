@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: maintenance
+  namespace: maintenance
+  labels:
+    app: maintenance
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: maintenance
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: maintenance
+    spec:
+      # No nodeSelector — lands on Karpenter-provisioned workload nodes.
+      # Karpenter will spin up a node in us-west-2a to host these pods.
+      containers:
+        - name: maintenance
+          image: 443496863898.dkr.ecr.us-west-2.amazonaws.com/giolosts/maintenance:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          env:
+            - name: NODE_ENV
+              value: production
+            # Optional: pin end time via env var. If omitted, defaults to
+            # container-start-time + 24h.
+            # - name: NEXT_PUBLIC_MAINTENANCE_END
+            #   value: "2026-08-05T12:00:00Z"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 1001
+            capabilities:
+              drop: ["ALL"]
+      # Topology spread removed — Karpenter's provisioner over-launches nodes
+      # when a soft spread hint exists on small workloads. For this static
+      # maintenance page, bin-packing on one node is cheaper.
+      # Re-add for real prod apps where 2-node spread matters.

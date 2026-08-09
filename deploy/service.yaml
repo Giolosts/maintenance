@@ -1,0 +1,18 @@
+# ClusterIP — traffic reaches this Service via the shared ALB (see ingress.yaml).
+# No LoadBalancer type = no per-service NLB = no $16/mo per service.
+apiVersion: v1
+kind: Service
+metadata:
+  name: maintenance
+  namespace: maintenance
+  labels:
+    app: maintenance
+spec:
+  type: ClusterIP
+  selector:
+    app: maintenance
+  ports:
+    - name: http
+      port: 80
+      targetPort: 3000
+      protocol: TCP

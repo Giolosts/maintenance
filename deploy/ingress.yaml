@@ -1,0 +1,72 @@
+# Ingress managed by aws-lb-controller. Attaches to the shared public ALB
+# (via group.name annotation). DNS is created manually in Cloudflare —
+# after apply, get the ALB DNS from `kubectl get ingress` and add a CNAME:
+#   maintenance.giolosts.co  CNAME  <alb-dns-name>
+#
+# Prerequisites:
+#   1. aws-lb-controller installed in k8s-services (Helm)
+#   2. ACM cert exists in us-west-2 for *.giolosts.co (or the specific host)
+#   3. ACM cert ARN pasted in certificate-arn annotation below
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: maintenance
+  namespace: maintenance
+  annotations:
+    # ---- Shared ALB ----
+    alb.ingress.kubernetes.io/group.name: public
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+
+    # ---- TLS ----
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80},{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/ssl-redirect: "443"
+    alb.ingress.kubernetes.io/certificate-arn: "arn:aws:acm:us-west-2:443496863898:certificate/6e606184-1686-407c-bfde-d29107ba5754"
+
+    # ---- Health check ----
+    alb.ingress.kubernetes.io/healthcheck-path: /api/health
+    alb.ingress.kubernetes.io/healthcheck-interval-seconds: "15"
+    alb.ingress.kubernetes.io/success-codes: "200"
+spec:
+  ingressClassName: alb
+  rules:
+    - host: maintenance.giolosts.co
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: maintenance
+                port:
+                  number: 80
+    - host: qa-pbr.giolosts.co
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: maintenance
+                port:
+                  number: 80
+    - host: qa-pbn.giolosts.co
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: maintenance
+                port:
+                  number: 80
+    - host: qa-phr.giolosts.co
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: maintenance
+                port:
+                  number: 80
